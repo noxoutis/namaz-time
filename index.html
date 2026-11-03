@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Время намаза</title>
 <meta name="description" content="Время намазов по джафаритской методике (имсак −17,7°, фаджр −16°, магриб −4,5°) для любой точки мира: на день и на месяц.">
-<meta name="theme-color" content="#3f9a43">
+<meta name="theme-color" content="#0a5a48">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -14,15 +14,17 @@
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
 <style>
 :root {
-  --green: #3f9a43; --green-dark: #2e7d32; --green-soft: #e3f2e4; --green-line: #8bc58e;
-  --bg: #f5f7f5; --card: #ffffff; --text: #1d241e; --muted: #5f6b60; --border: #d9e2d9;
-  --accent-row: #fff6d6; --shadow: 0 1px 3px rgba(0,0,0,.08);
+  --green: #0b6e58; --green-dark: #08523f; --green-soft: #e7f2ee; --green-line: #a8cfc2;
+  --velvet: linear-gradient(135deg, #063d31 0%, #0a5a48 55%, #0f7a61 100%);
+  --bg: #f4f7f6; --card: #ffffff; --text: #14211d; --muted: #5a6b66; --border: #d6e3de;
+  --sel-row: #f0f7f4; --shadow: 0 1px 3px rgba(6,61,49,.08);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --green: #5cb860; --green-dark: #7fcf83; --green-soft: #1f3321; --green-line: #3c6b3f;
-    --bg: #111511; --card: #1a201a; --text: #e6ece6; --muted: #9aa69b; --border: #2c362c;
-    --accent-row: #3a3418; --shadow: none;
+    --green: #2aa486; --green-dark: #6fd0b3; --green-soft: #10302a; --green-line: #2a5a4e;
+    --velvet: linear-gradient(135deg, #052a22 0%, #08463a 55%, #0b5e4c 100%);
+    --bg: #0b1311; --card: #121d1a; --text: #e4eeeb; --muted: #93a8a2; --border: #23352f;
+    --sel-row: #15302a; --shadow: none;
   }
 }
 * { box-sizing: border-box; }
@@ -33,9 +35,9 @@ body {
   padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
 }
 .wrap { max-width: 760px; margin: 0 auto; padding: 12px 16px 40px; }
-header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
-header.top h1 { font-size: 22px; margin: 0; color: var(--green-dark); }
-#todayLine { color: var(--muted); font-size: 14px; }
+header.top { background: var(--velvet); color: #fff; border-radius: 16px; padding: 16px 18px; margin: 4px 0 14px; box-shadow: 0 4px 14px rgba(6,61,49,.25); }
+header.top h1 { font-size: 24px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+#todayLine { color: rgba(255,255,255,.82); font-size: 14px; margin-top: 2px; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 14px; margin-bottom: 14px; }
 button, .btn {
   font: inherit; border: 1px solid var(--border); background: var(--card); color: var(--text);
@@ -97,8 +99,10 @@ table.month th, table.month td { border: 1px solid var(--green-line); padding: 6
 table.month th { background: var(--green-soft); font-weight: 600; font-size: 13px; }
 table.month td { font-size: 14px; }
 table.month tbody tr { cursor: pointer; }
-table.month tr.today td { background: var(--accent-row); font-weight: 700; }
-table.month tr.sel td { outline: 2px solid var(--green); outline-offset: -2px; }
+table.month tr.sel:not(.today) td { background: var(--sel-row); }
+table.month tr.today td { border-top: 1.5px solid var(--green); border-bottom: 1.5px solid var(--green); }
+table.month tr.today td:first-child { border-left: 1.5px solid var(--green); }
+table.month tr.today td:last-child { border-right: 1.5px solid var(--green); }
 .printhead { display: none; }
 
 /* хиджра и прочее */
@@ -112,6 +116,12 @@ details[open] > summary::before { content: "▾ "; }
 label.lbl { display: block; font-size: 14px; color: var(--muted); margin: 10px 0 4px; }
 footer { color: var(--muted); font-size: 13px; line-height: 1.5; }
 footer a { color: var(--green-dark); }
+#imgView { position: fixed; inset: 0; z-index: 2000; background: rgba(4,20,16,.94); display: flex; flex-direction: column; align-items: center; padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom)); gap: 10px; }
+#imgView .hint { color: #fff; text-align: center; font-size: 15px; line-height: 1.35; max-width: 420px; }
+#imgView .hint b { color: #8fe0c6; }
+#imgView .imgbox { flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; width: 100%; display: flex; justify-content: center; }
+#imgView img { max-width: 100%; height: auto; align-self: flex-start; border-radius: 6px; -webkit-touch-callout: default; }
+#imgView button { min-width: 160px; }
 #toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 1000; max-width: 90vw; text-align: center; }
 
 table.month th .s { display: none; }
@@ -133,8 +143,8 @@ table.month th .s { display: none; }
   .printhead { display: block; text-align: center; }
   .printhead .pt { font-size: 18pt; font-weight: 700; }
   .printhead .pp { font-size: 11pt; margin: 2mm 0 4mm; }
-  table.month th, table.month td { border-color: #4caf50; font-size: 10.5pt; padding: 1.2mm 1mm; color: #000; }
-  table.month th { background: #c8e6c9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  table.month th, table.month td { border-color: #5f9f8c; font-size: 10.5pt; padding: 1.2mm 1mm; color: #000; }
+  table.month th { background: #dcefe8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   table.month tr.today td { background: none; font-weight: 400; }
   table.month tr.sel td { outline: none; }
 }
@@ -203,9 +213,7 @@ table.month th .s { display: none; }
     <div id="times"></div>
     <div id="nextLine"></div>
     <div class="savebar">
-      <button data-save="day-png">🖼 PNG</button>
-      <button data-save="day-jpg">🖼 JPG</button>
-      <button data-save="day-pdf">📄 PDF</button>
+      <button data-save="day">⬇︎ Сохранить картинку</button>
     </div>
   </section>
 
@@ -224,10 +232,7 @@ table.month th .s { display: none; }
     </div>
     <div class="muted" id="monthNote" style="margin-top:6px">Нажмите на строку, чтобы открыть этот день вверху.</div>
     <div class="savebar">
-      <button data-save="month-png">🖼 PNG</button>
-      <button data-save="month-jpg">🖼 JPG</button>
-      <button data-save="month-pdf">📄 PDF</button>
-      <button id="printBtn">🖨 Печать</button>
+      <button data-save="month">⬇︎ Сохранить картинку месяца</button>
     </div>
   </section>
 
@@ -277,6 +282,11 @@ table.month th .s { display: none; }
   </footer>
 </div>
 <div id="toast" class="hidden"></div>
+<div id="imgView" class="hidden">
+  <div class="hint">Нажмите на картинку и <b>удерживайте</b>, затем выберите <b>«Сохранить в Фото»</b></div>
+  <div class="imgbox"><img id="imgViewImg" alt="Время намаза"></div>
+  <button class="primary" id="imgViewClose">Готово</button>
+</div>
 
 <script src="PrayTimes.js"></script>
 <script src="lib/tz.js"></script>

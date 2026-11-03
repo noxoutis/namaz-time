@@ -1,5 +1,5 @@
 // Офлайн-режим: расчёт работает без интернета (карта и поиск — только онлайн).
-const CACHE = 'namaz-v1';
+const CACHE = 'namaz-v2';
 const FILES = ['./', 'index.html', 'app.js', 'PrayTimes.js', 'lib/tz.js', 'lib/leaflet/leaflet.js', 'lib/leaflet/leaflet.css',
   'lib/leaflet/images/marker-icon.png', 'lib/leaflet/images/marker-icon-2x.png', 'lib/leaflet/images/marker-shadow.png',
   'manifest.webmanifest', 'icon.svg', 'icon-180.png'];

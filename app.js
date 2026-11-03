@@ -328,10 +328,8 @@ function moveMonth(n) {
 }
 $('#monPrev').addEventListener('click', () => moveMonth(-1));
 $('#monNext').addEventListener('click', () => moveMonth(1));
-$('#printBtn').addEventListener('click', () => window.print());
-
-// ---------- Картинки и PDF ----------
-const C = { green: '#4caf50', head: '#c8e6c9', line: '#4caf50', text: '#222222', muted: '#555555', bg: '#ffffff', today: '#fff3c4' };
+// ---------- Картинки ----------
+const C = { green: '#0a5a48', head: '#e3f1ec', line: '#7fb3a3', text: '#14211d', muted: '#5a6b66', bg: '#ffffff' };
 const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
 
 function wrapLines(ctx, text, maxW) {
@@ -410,48 +408,32 @@ function dayCanvas() {
   return cv;
 }
 
-let jspdfReady = null;
-function loadJsPdf() {
-  if (!jspdfReady) jspdfReady = new Promise((res, rej) => {
-    const s = document.createElement('script'); s.src = 'lib/jspdf.umd.min.js';
-    s.onload = () => res(window.jspdf.jsPDF); s.onerror = () => { jspdfReady = null; rej(new Error('jsPDF')); };
-    document.head.append(s);
-  });
-  return jspdfReady;
-}
-
-const toBlob = (cv, type, q) => new Promise(r => cv.toBlob(r, type, q));
 const safe = s => s.replace(/[\\/:*?"<>|]+/g, '-').slice(0, 60);
+// iPhone/iPad не дают сайту молча положить файл в «Фото»: показываем картинку, её сохраняют долгим нажатием
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-async function saveFile(blob, filename) {
-  const file = new File([blob], filename, { type: blob.type });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+function savePng(cv, filename) {
+  const url = cv.toDataURL('image/png');
+  if (isIOS) {
+    $('#imgViewImg').src = url;
+    $('#imgView').classList.remove('hidden');
+    return;
   }
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = filename;
+  a.href = url; a.download = filename;
   document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-  toast('Файл сохранён: ' + filename);
+  toast('Картинка сохранена в «Загрузки»');
 }
+$('#imgViewClose').addEventListener('click', () => { $('#imgView').classList.add('hidden'); $('#imgViewImg').removeAttribute('src'); });
 
 document.querySelectorAll('[data-save]').forEach(b => {
-  b.addEventListener('pointerdown', () => { if (b.dataset.save.endsWith('pdf')) loadJsPdf().catch(() => {}); });
-  b.addEventListener('click', async () => {
-    const [what, fmt] = b.dataset.save.split('-');
-    const cv = what === 'month' ? monthCanvas() : dayCanvas();
-    const base = what === 'month'
-      ? `Время намаза — ${MONTHS[viewMonth.m - 1]} ${viewMonth.y} — ${safe(place.name)}`
-      : `Время намаза — ${viewDay.d} ${MONTHS_GEN[viewDay.m - 1]} ${viewDay.y} — ${safe(place.name)}`;
-    try {
-      if (fmt === 'png') return saveFile(await toBlob(cv, 'image/png'), base + '.png');
-      if (fmt === 'jpg') return saveFile(await toBlob(cv, 'image/jpeg', 0.92), base + '.jpg');
-      const JsPDF = await loadJsPdf();
-      const pdf = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-      const k = Math.min(190 / cv.width, 277 / cv.height), w = cv.width * k, h = cv.height * k;
-      pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', (210 - w) / 2, 10, w, h);
-      await saveFile(pdf.output('blob'), base + '.pdf');
-    } catch (e) { toast('Не получилось сохранить. Попробуйте ещё раз.'); }
+  b.addEventListener('click', () => {
+    const month = b.dataset.save === 'month';
+    const name = month
+      ? `Время намаза — ${MONTHS[viewMonth.m - 1]} ${viewMonth.y} — ${safe(place.name)}.png`
+      : `Время намаза — ${viewDay.d} ${MONTHS_GEN[viewDay.m - 1]} ${viewDay.y} — ${safe(place.name)}.png`;
+    try { savePng(month ? monthCanvas() : dayCanvas(), name); }
+    catch (e) { toast('Не получилось сохранить. Попробуйте ещё раз.'); }
   });
 });
 

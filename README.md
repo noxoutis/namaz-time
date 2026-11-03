@@ -12,8 +12,8 @@
 - белые ночи — имсак и фаджр в середине ночи.
 
 Возможности: поиск места по названию и по карте, геолокация, избранные места, таблица на месяц,
-дата по хиджре и конвертор дат, сохранение в PNG, JPG и PDF, печать, работа без интернета (кроме карты и поиска).
+дата по хиджре и конвертор дат, сохранение таблицы картинкой (PNG), работа без интернета (кроме карты и поиска).
 
 Используется: [PrayTimes.js](http://praytimes.org) 2.3 (© PrayTimes.org, GNU LGPL v3),
 [Leaflet](https://leafletjs.com) (BSD-2), карта и поиск © участники [OpenStreetMap](https://www.openstreetmap.org/copyright) (Nominatim),
-[tz-lookup](https://github.com/photostructure/tz-lookup) (CC0), [jsPDF](https://github.com/parallax/jsPDF) (MIT).
+[tz-lookup](https://github.com/photostructure/tz-lookup) (CC0).
