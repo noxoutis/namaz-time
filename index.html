@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Время намаза</title>
+<meta name="description" content="Время намазов по джафаритской методике (имсак −17,7°, фаджр −16°, магриб −4,5°) для любой точки мира: на день и на месяц.">
+<meta name="theme-color" content="#3f9a43">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Время намаза">
+<link rel="stylesheet" href="lib/leaflet/leaflet.css">
+<style>
+:root {
+  --green: #3f9a43; --green-dark: #2e7d32; --green-soft: #e3f2e4; --green-line: #8bc58e;
+  --bg: #f5f7f5; --card: #ffffff; --text: #1d241e; --muted: #5f6b60; --border: #d9e2d9;
+  --accent-row: #fff6d6; --shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --green: #5cb860; --green-dark: #7fcf83; --green-soft: #1f3321; --green-line: #3c6b3f;
+    --bg: #111511; --card: #1a201a; --text: #e6ece6; --muted: #9aa69b; --border: #2c362c;
+    --accent-row: #3a3418; --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+.wrap { max-width: 760px; margin: 0 auto; padding: 12px 16px 40px; }
+header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
+header.top h1 { font-size: 22px; margin: 0; color: var(--green-dark); }
+#todayLine { color: var(--muted); font-size: 14px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 14px; margin-bottom: 14px; }
+button, .btn {
+  font: inherit; border: 1px solid var(--border); background: var(--card); color: var(--text);
+  border-radius: 10px; padding: 9px 12px; cursor: pointer; min-height: 40px;
+}
+button:active { transform: scale(.98); }
+button.primary { background: var(--green); border-color: var(--green); color: #fff; }
+button.icon { min-width: 44px; padding: 6px 10px; font-size: 20px; line-height: 1; }
+button.link { border: none; background: none; color: var(--green-dark); padding: 6px 4px; min-height: 0; text-decoration: underline; }
+input, select {
+  font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 9px 10px; min-height: 42px; width: 100%;
+}
+.row { display: flex; gap: 8px; align-items: center; }
+.row > .grow { flex: 1; min-width: 0; }
+.muted { color: var(--muted); font-size: 14px; }
+.hidden { display: none !important; }
+
+/* место */
+#placeName { font-weight: 600; font-size: 17px; overflow-wrap: anywhere; }
+#placeMeta { margin-top: 2px; }
+.tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.tools button { padding: 8px 4px; font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tools button .i { font-size: 20px; }
+.tools button.on { background: var(--green-soft); border-color: var(--green-line); }
+.panel { margin-top: 12px; }
+#results { list-style: none; margin: 8px 0 0; padding: 0; }
+#results li button { width: 100%; text-align: left; margin-top: 6px; }
+#results li .sub { display: block; color: var(--muted); font-size: 13px; }
+#map { height: 340px; border-radius: 12px; margin-top: 8px; z-index: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chip { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 999px; background: var(--card); }
+.chip button { border: none; background: none; min-height: 36px; padding: 6px 12px; }
+.chip button.x { padding: 6px 10px 6px 0; color: var(--muted); }
+#status { margin-top: 8px; }
+
+/* день */
+.dayhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dayhead .mid { text-align: center; flex: 1; }
+#dayTitle { font-weight: 600; font-size: 17px; }
+#dayHijri { color: var(--muted); font-size: 14px; }
+#times { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.t { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: baseline; }
+.t .n { color: var(--muted); }
+.t .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.t.next { background: var(--green-soft); border-color: var(--green-line); }
+.t.next .n { color: var(--green-dark); font-weight: 600; }
+.t.last { grid-column: 1 / -1; }
+#nextLine { margin-top: 10px; text-align: center; color: var(--green-dark); font-weight: 600; min-height: 1.4em; }
+.savebar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.savebar button { flex: 1; min-width: 70px; }
+
+/* месяц */
+.monthhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#monthTitle { font-weight: 600; font-size: 18px; text-align: center; flex: 1; }
+.tablewrap { overflow-x: auto; margin-top: 10px; }
+table.month { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+table.month th, table.month td { border: 1px solid var(--green-line); padding: 6px 2px; text-align: center; white-space: nowrap; }
+table.month th { background: var(--green-soft); font-weight: 600; font-size: 13px; }
+table.month td { font-size: 14px; }
+table.month tbody tr { cursor: pointer; }
+table.month tr.today td { background: var(--accent-row); font-weight: 700; }
+table.month tr.sel td { outline: 2px solid var(--green); outline-offset: -2px; }
+.printhead { display: none; }
+
+/* хиджра и прочее */
+details > summary { cursor: pointer; font-weight: 600; font-size: 17px; list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: "▸ "; color: var(--green); }
+details[open] > summary::before { content: "▾ "; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid3 { display: grid; grid-template-columns: 1fr 2fr 1.2fr; gap: 8px; }
+.out { margin-top: 8px; font-weight: 600; min-height: 1.4em; }
+label.lbl { display: block; font-size: 14px; color: var(--muted); margin: 10px 0 4px; }
+footer { color: var(--muted); font-size: 13px; line-height: 1.5; }
+footer a { color: var(--green-dark); }
+#toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 1000; max-width: 90vw; text-align: center; }
+
+table.month th .s { display: none; }
+@media (max-width: 480px) {
+  .wrap { padding-left: 10px; padding-right: 10px; }
+  #monthCard { padding: 12px 6px; }
+  table.month th { font-size: 11px; padding: 5px 0; letter-spacing: -.2px; }
+  table.month th .s { display: inline; }
+  table.month th .f { display: none; }
+  table.month td { font-size: 13px; padding: 6px 0; letter-spacing: -.2px; }
+  .t .v { font-size: 20px; }
+}
+@media print {
+  @page { size: A4 portrait; margin: 10mm; }
+  body { background: #fff; color: #000; padding: 0; }
+  .wrap > *:not(#monthCard) { display: none !important; }
+  #monthCard { border: none; box-shadow: none; padding: 0; margin: 0; }
+  .monthhead, .savebar, #monthNote { display: none !important; }
+  .printhead { display: block; text-align: center; }
+  .printhead .pt { font-size: 18pt; font-weight: 700; }
+  .printhead .pp { font-size: 11pt; margin: 2mm 0 4mm; }
+  table.month th, table.month td { border-color: #4caf50; font-size: 10.5pt; padding: 1.2mm 1mm; color: #000; }
+  table.month th { background: #c8e6c9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  table.month tr.today td { background: none; font-weight: 400; }
+  table.month tr.sel td { outline: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Время намаза</h1>
+    <div id="todayLine"></div>
+  </header>
+
+  <section class="card" id="placeCard">
+    <div class="row">
+      <div class="grow">
+        <div id="placeName">…</div>
+        <div id="placeMeta" class="muted"></div>
+      </div>
+      <button class="icon" id="favBtn" title="Добавить в избранное" aria-label="Добавить в избранное">☆</button>
+    </div>
+    <div class="tools">
+      <button id="geoBtn"><span class="i">📍</span>Я здесь</button>
+      <button id="searchBtn"><span class="i">🔍</span>Поиск</button>
+      <button id="mapBtn"><span class="i">🗺️</span>Карта</button>
+      <button id="favListBtn"><span class="i">★</span>Мои места</button>
+    </div>
+
+    <div class="panel hidden" id="searchPanel">
+      <form id="searchForm" class="row">
+        <input class="grow" id="q" type="search" placeholder="Город, улица, адрес…" autocomplete="off" enterkeyhint="search">
+        <button class="primary" type="submit">Найти</button>
+      </form>
+      <ul id="results"></ul>
+    </div>
+
+    <div class="panel hidden" id="mapPanel">
+      <div class="muted">Нажмите на карту, чтобы выбрать точку.</div>
+      <div id="map"></div>
+    </div>
+
+    <div class="panel hidden" id="favPanel">
+      <div class="chips" id="favChips"></div>
+      <details style="margin-top:12px">
+        <summary style="font-size:15px">Ввести координаты вручную</summary>
+        <div class="grid2" style="margin-top:8px">
+          <input id="mLat" inputmode="decimal" placeholder="Широта, напр. 55.67">
+          <input id="mLng" inputmode="decimal" placeholder="Долгота, напр. 37.86">
+        </div>
+        <input id="mName" placeholder="Название (необязательно)" style="margin-top:8px">
+        <button class="primary" id="mGo" style="margin-top:8px;width:100%">Показать время</button>
+      </details>
+    </div>
+    <div id="status" class="muted hidden"></div>
+  </section>
+
+  <section class="card" id="dayCard">
+    <div class="dayhead">
+      <button class="icon" id="dayPrev" aria-label="Предыдущий день">‹</button>
+      <div class="mid">
+        <div id="dayTitle"></div>
+        <div id="dayHijri"></div>
+      </div>
+      <button class="icon" id="dayNext" aria-label="Следующий день">›</button>
+    </div>
+    <div style="text-align:center"><button class="link hidden" id="dayToday">Вернуться к сегодня</button></div>
+    <div id="times"></div>
+    <div id="nextLine"></div>
+    <div class="savebar">
+      <button data-save="day-png">🖼 PNG</button>
+      <button data-save="day-jpg">🖼 JPG</button>
+      <button data-save="day-pdf">📄 PDF</button>
+    </div>
+  </section>
+
+  <section class="card" id="monthCard">
+    <div class="printhead"><div class="pt" id="printTitle"></div><div class="pp" id="printPlace"></div></div>
+    <div class="monthhead">
+      <button class="icon" id="monPrev" aria-label="Предыдущий месяц">‹</button>
+      <div id="monthTitle"></div>
+      <button class="icon" id="monNext" aria-label="Следующий месяц">›</button>
+    </div>
+    <div class="tablewrap">
+      <table class="month">
+        <thead><tr><th>День</th><th>Имсак</th><th>Фаджр</th><th>Вос<span class="s">.</span><span class="f">ход</span></th><th>Зухр</th><th>Закат</th><th>Маг<span class="s">.</span><span class="f">риб</span></th><th>Пол<span class="s">.</span><span class="f">ночь</span></th></tr></thead>
+        <tbody id="monthBody"></tbody>
+      </table>
+    </div>
+    <div class="muted" id="monthNote" style="margin-top:6px">Нажмите на строку, чтобы открыть этот день вверху.</div>
+    <div class="savebar">
+      <button data-save="month-png">🖼 PNG</button>
+      <button data-save="month-jpg">🖼 JPG</button>
+      <button data-save="month-pdf">📄 PDF</button>
+      <button id="printBtn">🖨 Печать</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <details id="hijriBox">
+      <summary>Дата по хиджре и конвертор</summary>
+      <label class="lbl" for="hCorr">Поправка даты хиджры (если начало месяца по луне отличается)</label>
+      <select id="hCorr">
+        <option value="-2">−2 дня</option><option value="-1">−1 день</option>
+        <option value="0" selected>без поправки</option>
+        <option value="1">+1 день</option><option value="2">+2 дня</option>
+      </select>
+      <label class="lbl" for="gIn">Григорианская дата → хиджра</label>
+      <input id="gIn" type="date">
+      <div class="out" id="gOut"></div>
+      <label class="lbl">Хиджра → григорианская дата</label>
+      <div class="grid3">
+        <input id="hD" type="number" min="1" max="30" inputmode="numeric" placeholder="День">
+        <select id="hM"></select>
+        <input id="hY" type="number" min="1" max="2000" inputmode="numeric" placeholder="Год">
+      </div>
+      <div class="out" id="hOut"></div>
+    </details>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>Как считается время</summary>
+      <p class="muted" style="margin-bottom:0">
+        Методика сайта shiatime.ru (джафаритская):
+        <b>имсак</b> — солнце на 17,7° под горизонтом (Институт геофизики Тегеранского университета);
+        <b>фаджр</b> — 16° (Исследовательский центр Лива, Кум);
+        <b>восход</b> и <b>закат</b> — появление и исчезновение солнечного диска;
+        <b>зухр</b> — прохождение солнцем меридиана (+1 минута);
+        <b>магриб</b> — солнце на 4,5° под горизонтом;
+        <b>полночь</b> — середина между закатом и фаджром.
+        В белые ночи, когда солнце не опускается до нужного угла, имсак и фаджр берутся в середине ночи.
+        Расчёт тот же, что был на сайте, сверен с его таблицами минута в минуту.
+      </p>
+    </details>
+  </section>
+
+  <footer>
+    Расчёт: <a href="http://praytimes.org" target="_blank" rel="noopener">PrayTimes.js</a> (© PrayTimes.org, LGPL v3).
+    Карта и поиск: © участники <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>.
+    Место и избранное хранятся только на вашем устройстве.
+  </footer>
+</div>
+<div id="toast" class="hidden"></div>
+
+<script src="PrayTimes.js"></script>
+<script src="lib/tz.js"></script>
+<script src="lib/leaflet/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
